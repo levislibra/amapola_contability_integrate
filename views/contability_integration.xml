@@ -1,0 +1,103 @@
+<openerp>
+  <data>
+    <!-- Configuracion - Formularios de creacion  -->
+
+    <record id="view_tree_contability_integration_conf" model="ir.ui.view">
+        <field name="name">Contability Integration Conf</field>
+        <field name="model">contability.integration.configuration</field>
+        <field name="arch" type="xml">
+            <tree string="Configuracion">
+                <field name="company_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_form_contability_integration_conf" model="ir.ui.view">
+        <field name="name">Contability Integration Conf Form</field>
+        <field name="model">contability.integration.configuration</field>
+        <field name="arch" type="xml">
+            <form string="Configuracion">         
+                <sheet>
+                    <group>
+	                    <field name="company_id"/>
+	                    <field name="journalCash_id"/>
+	                    <field name="journalBank_id"/>
+	                    <field name="journalCheck_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="contability_integration_action_conf" model="ir.actions.act_window">
+        <field name="name">Configuracion</field>
+        <field name="res_model">contability.integration.configuration</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_tree_contability_integration_conf"/>
+    </record>
+
+    <!-- Contability Integration -->
+
+    <record id="view_tree_contability_integration" model="ir.ui.view">
+        <field name="name">Contability Integration</field>
+        <field name="model">contability.integration</field>
+        <field name="arch" type="xml">
+            <tree string="Integracion Contable">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="company_id"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+
+
+	<record id="view_form_contability_integration" model="ir.ui.view">
+        <field name="name">Contability Integration Form</field>
+        <field name="model">contability.integration</field>
+        <field name="arch" type="xml">
+            <form string="Integracion Contable">
+                <header>
+                    <!--<button name="confirmar" class="oe_highlight" string="Confirmar" states="cotizacion" type="object" />
+                    <button name="facturar" class="oe_highlight" string="Facturar" states="confirmada" type="object" />-->
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+	                <group>
+	                    <field name="name" attrs="{'readonly': [('state', '!=', 'draft')], 'required': False}"/>
+	                    <field name="date" attrs="{'required': True}"/>
+	                    <field name="company_id" attrs="{'required': True}"/>
+	                    <field name="journalCash_id" attrs="{'required': True}"/>
+	                    <field name="journalBank_id" attrs="{'required': True}"/>
+	                    <field name="journalCheck_id" attrs="{'required': True}"/>
+	                </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="contability_integration_action" model="ir.actions.act_window">
+        <field name="name">Contability Integration</field>
+        <field name="res_model">contability.integration</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_tree_contability_integration"/>
+    </record>
+
+
+    <!-- FIN -->
+
+    <!-- Menu Principal del modulo (barra superior) -->
+    <menuitem id="menu_contability_integracion" name="Integracion contable" />
+    
+    <!-- SubMenu 1 - Integracion Contable -->
+    <menuitem id="smenu_contability_integration" name="Integracion contable" parent="menu_contability_integracion"  sequence="0" />
+    <menuitem id="smenu_contability_integration_action" name="Integracion contable" parent="smenu_contability_integration" action="contability_integration_action"  sequence="0" />
+
+    <!-- SubMenu 2 - Integracion Contable Configuracion -->
+    <menuitem id="smenu_contability_integration_conf" name="Configuracion" parent="menu_contability_integracion"  sequence="0" />
+    <menuitem id="smenu_contability_integration_action_conf" name="Configuracion" parent="smenu_contability_integration_conf" action="contability_integration_action_conf"  sequence="0" />
+
+
+  </data>
+</openerp>
