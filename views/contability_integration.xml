@@ -64,32 +64,44 @@
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
-	                <group>
-	                    <field name="name" attrs="{'readonly': [('state', '!=', 'draft')], 'required': False}"/>
-	                    <field name="date" attrs="{'required': True}"/>
-	                    <field name="company_id" attrs="{'required': True}"/>
-	                    <field name="journalCash_id" attrs="{'required': True}"/>
-	                    <field name="journalBank_id" attrs="{'required': True}"/>
-	                    <field name="journalCheck_id" attrs="{'required': True}"/>
-	                    <field name="file" attrs="{'required': True}"/>
-	                </group>
-	                <group  attrs="{'invisible': [('state', '==', 'draft')]}">
-	                	<div>
-	                    	<field name="sum_cash"/>
-	                    	<field name="count_cash"/>
-	                    </div>
-	                    <div>
-	                    	<field name="sum_bank"/>
-	                    	<field name="count_bank"/>
-	                    </div>
-	                    <div>
-	                    	<field name="sum_check"/>
-	                    	<field name="count_check"/>
-	                    </div>
-	                    <div>
-	                    	<field name="sum_total"/>
-	                    </div>
-	                </group>
+                	<group>
+		                <group>
+		                    <field name="name" attrs="{'readonly': [('state', '!=', 'draft')], 'required': False}"/>
+		                    <field name="date" attrs="{'required': True}"/>
+		                    <field name="company_id" attrs="{'required': True}"/>
+		                    <field name="journalCash_id" attrs="{'required': True}"/>
+		                    <field name="journalBank_id" attrs="{'required': True}"/>
+		                    <field name="journalCheck_id" attrs="{'required': True}"/>
+		                    <field name="file" attrs="{'required': True}"/>
+		                </group>
+		                <group  attrs="{'invisible': [('state', '==', 'draft')]}">
+		                	<field name="sum_cash"/>
+		                	<field name="count_cash"/>
+		                	<field name="sum_bank"/>
+		                	<field name="count_bank"/>
+		                	<field name="sum_check"/>
+		                	<field name="count_check"/>
+		                	<field name="sum_total"/>
+		                </group>
+		            </group>
+	                <notebook>
+	                	<page string="Transacciones">
+	                		<field name="trans_ids">
+	                			<tree string="Transacciones">
+	                				<field name="state"/>
+	                				<field name="date"/>
+	                				<field name="name"/>
+	                				<field name="partner_id"/>
+	                				<field name="amount"/>
+	                				<field name="tipo"/>
+	                				<field name="emision"/>
+	                				<field name="acreditacion"/>
+	                				<field name="banco_id"/>
+	                				<field name="nro_cheque"/>
+	                			</tree>
+	                		</field>
+	                	</page>
+	                </notebook>
                 </sheet>
             </form>
         </field>

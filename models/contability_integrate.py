@@ -13,7 +13,27 @@ class ContabilityIntegrationConfiguration(models.Model):
 	journalBank_id = fields.Many2one('account.journal', 'Diario Banco', domain="[('type', 'in', ('bank', 'cash'))]")
 	journalCheck_id = fields.Many2one('account.journal', 'Diario Cheque', domain="[('type', 'in', ('bank', 'cash'))]")
 
-class ContabilityIntegration(models.TransientModel):
+	_sql_constraints=[('contability_integration_conf_unique', 'unique(company_id)', 'Company should be unique')]
+
+class TransactionInformation(models.Model):
+	_name='transaction.information'
+
+	name = fields.Char('nombre', required=True)
+	date = fields.Date('Fecha', required=True)
+	partner_id = fields.Many2one('res.partner', 'Familia', required=True)
+	amount = fields.Float('Importe', required=True)
+	tipo = fields.Selection([('cash', 'Efectivo'), ('bank', 'Banco'), ('check', 'Cheque')], string='Tipo', readonly=True, required=True)
+	emision = fields.Date('Emision')
+	acreditacion = fields.Date('Acreditacion')
+	banco_id = fields.Many2one('res.bank', 'Banco')
+	nro_cheque = fields.Char('Nro cheque')
+	contability_integration_id = fields.Many2one('contability.integration', 'Integracion contable')
+	move_id = fields.Many2one('account.move', 'Asiento')
+	state = fields.Selection([('ok', 'OK'), ('error', 'Error')], default='ok', string='Estado', readonly=True, track_visibility='onchange')
+
+	#_sql_constraints=[('transaction_information_unique', 'unique(name)', 'Name should be unique')]
+
+class ContabilityIntegration(models.Model):
 	_name='contability.integration'
 
 	name = fields.Char()
@@ -34,25 +54,110 @@ class ContabilityIntegration(models.TransientModel):
 	count_check = fields.Integer('Cantidad de cheques', default=0)
 	sum_total = fields.Float('Total')
 
-	bank_moves = []
-	cash_moves = []
-	check_moves = []
+	trans_ids = fields.One2many('transaction.information', 'contability_integration_id', 'Transacciones', ondelete='cascade')
 
+	def import_excel(self):
+		file = self.file.decode('base64')
+		excel_fileobj = TemporaryFile('wb+')
+		excel_fileobj.write(file)
+		excel_fileobj.seek(0)
+		# Create workbook
+		workbook = openpyxl.load_workbook(excel_fileobj, data_only=True)
+		# Get the first sheet of excel file
+		sheet = workbook[workbook.get_sheet_names()[0]]
+		move_ids = []
+		count = 0
+
+		for row in sheet.rows:
+			if row[0].value != None and row[0].value != 'Fecha' and count < 23:
+				count += 1
+				fecha = row[0].value
+				recibo = row[1].value
+				familia = row[2].value
+				cod_cuenta = row[3].value
+				tipo_cuenta = row[4].value
+				importe = row[5].value
+				emision = row[6].value
+				acreditacion = row[7].value
+				banco = row[8].value
+				nro_cheque = row[9].value
+
+				partner_pool = self.env['res.partner']
+				partner_id = partner_pool.search([('name', '=', familia)])
+				if len(partner_id) == 0:
+					partner_obj = self.env['res.partner']
+					partner_id = partner_obj.sudo(self.env.uid).create(dict(name=familia,))
+				partner_id = partner_id[0]
+
+				banco_id = None
+				print banco
+				if int(banco) != 0:
+					bank_pool = self.env['res.bank']
+					banco_id = bank_pool.search([('bank_code', '=', str(int(banco)))])
+				#else:
+					# bano_id = DESCONOCIDO
+
+				if cod_cuenta == 1:
+					# Cash move
+					trans = self.env['transaction.information'].create({
+						'name': recibo,
+						'date': fecha,
+						'partner_id': partner_id.id,
+						'amount':importe,
+						'tipo': 'cash',
+						'emision': None,
+						'acreditacion': None,
+						'banco_id': None,
+						'nro_cheque': None,
+					})
+					move_ids.append(trans.id)
+					self.sum_cash += importe
+					self.count_cash += 1
+				if cod_cuenta == 2:
+					# Bank move
+					trans = self.env['transaction.information'].create({
+						'name': recibo,
+						'date': fecha,
+						'partner_id': partner_id.id,
+						'amount':importe,
+						'tipo': 'bank',
+						'emision': None,
+						'acreditacion': None,
+						'banco_id': None,
+						'nro_cheque': None,
+					})
+					move_ids.append(trans.id)
+					self.sum_bank += importe
+					self.count_bank += 1
+				if cod_cuenta == 3:
+					# Check move
+					trans = self.env['transaction.information'].create({
+						'name': recibo,
+						'date': fecha,
+						'partner_id': partner_id.id,
+						'amount':importe,
+						'tipo': 'cash',
+						'emision': emision,
+						'acreditacion': acreditacion,
+						'banco_id': banco_id.id,
+						'nro_cheque': nro_cheque,
+					})
+					move_ids.append(trans.id)
+					self.sum_check += importe
+					self.count_check += 1
+
+				self.sum_total = self.sum_cash + self.sum_bank + self.sum_check
+				#check_test
+				self.trans_ids = move_ids
+
+	@api.one
+	def validate(self):
+		self.import_excel()
+		#self.state = 'open'
+		return True
+	
 	def create_move(self, fecha, recibo, familia, importe, tipo):
 		print "---- create_move -----"
-		print familia
-		print fecha
-		partner_pool = self.env['res.partner']
-		partner_id = partner_pool.search([('name', '=', familia)])
-		print "partner_id"
-		print partner_id
-		partner_id = partner_id[0]
-		print "partner_id"
-		print partner_id
-
-		if partner_id == None:
-			partner_obj = self.env['res.partner']
-			partner_id = partner_obj.sudo(self.env.uid).create(dict(name=familia,))
 		
 		if tipo == 1:
 			journal_move_id = self.journalCash_id
@@ -109,61 +214,17 @@ class ContabilityIntegration(models.TransientModel):
 		})
 		#move.state = 'posted'
 
-
-
-	def import_excel(self):
-		file = self.file.decode('base64')
-		excel_fileobj = TemporaryFile('wb+')
-		excel_fileobj.write(file)
-		excel_fileobj.seek(0)
-		# Create workbook
-		workbook = openpyxl.load_workbook(excel_fileobj, data_only=True)
-		# Get the first sheet of excel file
-		sheet = workbook[workbook.get_sheet_names()[0]]
-		#print sheet.get_highest_row()
-		#last_selection = 'J' + str(sheet.get_highest_row())
-		#selection = sheet['A5': last_selection]
-
-		for row in sheet.rows:
-			if row[0] != None and row[0] != 'Fecha':
-				fecha = row[0].value
-				recibo = row[1].value
-				familia = row[2].value
-				cod_cuenta = row[3].value
-				tipo_cuenta = row[4].value
-				importe = row[5].value
-				emision = row[6].value
-				acreditacion = row[7].value
-				banco = row[8].value
-				nro_cheque = row[9].value
-				if row[3].value == 1:
-					# Cash move
-					self.cash_moves.append([fecha, recibo, familia, importe])
-					self.sum_cash += importe
-					self.count_cash += 1
-				if row[3].value == 2:
-					# Bank move
-					self.bank_moves.append([fecha, recibo, familia, importe])
-					self.sum_bank += importe
-					self.count_bank += 1
-				if row[3].value == 3:
-					# Check move
-					self.check_moves.append([fecha, recibo, familia, importe, emision,acreditacion, banco, nro_cheque])
-					self.sum_check += importe
-					self.count_check += 1
-
-				self.sum_total = self.sum_cash + self.sum_bank + self.sum_check
-
-	@api.one
-	def validate(self):
-		self.import_excel()
-		self.state = 'open'
-		return True
-	
 	@api.one
 	def confirm(self):
 		print "Confirm ***********************************"
-		print self.cash_moves[0]
-		self.create_move(self.cash_moves[0][0], self.cash_moves[0][1], self.cash_moves[0][2], self.cash_moves[0][3], 1)
-		#self.state = 'draft'
+		#print self.cash_moves
+		#self.create_move(self.cash_moves[0][0], self.cash_moves[0][1], self.cash_moves[0][2], self.cash_moves[0][3], 1)
+		self.state = 'draft'
 		return True
+
+class Bank(models.Model):
+	_inherit = 'res.bank'
+	_name = 'res.bank'
+	_description = 'Codigos bancarios para argentina'
+
+	bank_code = fields.Char()
